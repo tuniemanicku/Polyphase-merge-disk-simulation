@@ -18,16 +18,14 @@ class IOInterface:
         self.read_file2 = ""
         self.read_handle2 = None
 
-        self.write_buffer = []
-        self.write_index = 0
-        self.write_file = ""
+        self.write_buffers = []
+        self.write_indexes = []
+        self.write_files = []
 
     def read_page(self, index, filename):
-        #print("file",filename, "rf1", self.read_file,"rf2", self.read_file2, "rr", self.recently_read)
         if filename == self.read_file:
             if index - self.base_address == len(self.read_buffer) and index%PAGE_SIZE != 0: #reached the end of file
                 return None
-            #print(index, self.base_address)
             if index - self.base_address == PAGE_SIZE:
                 self.access_counter += 1
                 self.base_address += PAGE_SIZE
@@ -39,14 +37,12 @@ class IOInterface:
                     else:
                         break
             self.recently_read = self.read_file
-            #print(self.base_address)
             if len(self.read_buffer) == 0:
                 return None
             return self.read_buffer[index-self.base_address]
         elif filename == self.read_file2:
             if index - self.base_address2 == len(self.read_buffer) and index%PAGE_SIZE != 0: #reached the end of file
                 return None
-            #print(index, self.base_address)
             if index - self.base_address2 == PAGE_SIZE:
                 self.access_counter += 1
                 self.base_address2 += PAGE_SIZE
@@ -63,7 +59,6 @@ class IOInterface:
             return self.read_buffer2[index-self.base_address2]
         else:
             if self.recently_read == self.read_file2 or self.recently_read == "":
-                #print("rf1")
                 self.access_counter += 1
                 if self.read_handle:
                     self.read_handle.close()
@@ -87,7 +82,6 @@ class IOInterface:
                 self.recently_read = self.read_file
                 return self.read_buffer[index-self.base_address]
             else:
-                #print("rf2")
                 self.access_counter += 1
                 if self.read_handle2:
                     self.read_handle2.close()
@@ -108,31 +102,36 @@ class IOInterface:
                 self.read_file2 = filename
                 self.recently_read = self.read_file2
                 return self.read_buffer2[index-self.base_address2]
-
-
-    def reset_write_buffer(self, record):
-        if self.write_file != "":
+            
+    def write_all_cached_records(self):
+        for i in range(len(self.write_files)):
+            with open(self.write_files[i], "a") as file:
+                file.write(''.join(self.write_buffers[i]))
             self.access_counter += 1
-            with open(self.write_file, "a") as file:
-                file.write(''.join(self.write_buffer))
-        self.write_buffer = [record]
-        self.write_index = 1
-    def reset_write_buffer_end(self):
-        if self.write_file != "":
-            self.access_counter += 1
-            with open(self.write_file, "a") as file:
-                file.write(''.join(self.write_buffer))
-            print(self.write_buffer)
+            #print(f"wrote buffer{i} {self.write_buffers[i]}")
+        self.clear_write_buffer()
+
+    def create_buffer(self, filename):
+        self.write_files.append(filename)
+        self.write_buffers.append([])
+        self.write_indexes.append(0)
+
     def write_page(self, record, filename):
-        if filename == self.write_file:
-            if self.write_index == PAGE_SIZE:
-                self.reset_write_buffer(record)
-            else:
-                self.write_buffer.append(record)
-                self.write_index += 1
-        else:
-            self.reset_write_buffer(record)
-            self.write_file = filename
+        if filename not in self.write_files:
+            self.create_buffer(filename)
+        for i in range (len(self.write_files)):
+            if self.write_files[i] == filename:
+                if self.write_indexes[i] == PAGE_SIZE:
+                    with open(filename, "a") as file:
+                        file.write(''.join(self.write_buffers[i]))
+                        self.write_buffers[i] = [record]
+                        self.write_indexes[i] = 1
+                        self.access_counter += 1
+                        #print(f"writing {i}")
+                else:
+                    self.write_buffers[i].append(record)
+                    self.write_indexes[i] += 1
+                break
     
     def get_acces_counter(self):
         return self.access_counter
@@ -153,9 +152,9 @@ class IOInterface:
             self.read_handle2.close()
 
     def clear_write_buffer(self):
-        self.write_buffer = []
-        self.write_index = 0
-        self.write_file = ""
+        self.write_buffers = []
+        self.write_indexes = []
+        self.write_files = []
     def clear_file(self, filename):
         with open(filename, "w") as file:
             pass
