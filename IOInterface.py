@@ -32,7 +32,6 @@ class IOInterface:
             if self.read_index - self.base_address == len(self.read_buffer) and self.read_index%PAGE_SIZE != 0: #reached the end of file
                 return None
             if self.read_index - self.base_address == PAGE_SIZE:
-                self.access_counter += 1
                 self.base_address += PAGE_SIZE
                 self.read_buffer = []
                 for _ in range(PAGE_SIZE):
@@ -41,6 +40,9 @@ class IOInterface:
                         self.read_buffer.append(record)
                     else:
                         break
+                if len(self.read_buffer) != 0:
+                    #print("End of buffer1 next access")
+                    self.access_counter += 1
             self.recently_read = self.read_file
             if len(self.read_buffer) == 0:
                 return None
@@ -48,10 +50,9 @@ class IOInterface:
             split = self.read_buffer[self.read_index-self.base_address-1].split()
             return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
         elif filename == self.read_file2:
-            if self.read_index2 - self.base_address2 == len(self.read_buffer) and self.read_index2%PAGE_SIZE != 0: #reached the end of file
+            if self.read_index2 - self.base_address2 == len(self.read_buffer2) and self.read_index2%PAGE_SIZE != 0: #reached the end of file
                 return None
             if self.read_index2 - self.base_address2 == PAGE_SIZE:
-                self.access_counter += 1
                 self.base_address2 += PAGE_SIZE
                 self.read_buffer2 = []
                 for _ in range(PAGE_SIZE):
@@ -60,6 +61,9 @@ class IOInterface:
                         self.read_buffer2.append(record)
                     else:
                         break
+                if len(self.read_buffer2) != 0:
+                    #print("End of buffer2 next access")
+                    self.access_counter += 1
             self.recently_read = self.read_file2
             if len(self.read_buffer2) == 0:
                 return None
@@ -68,6 +72,7 @@ class IOInterface:
             return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
         else:
             if self.recently_read == self.read_file2 or self.recently_read == "":
+                #print("Replacing older buffer or placing first")
                 self.access_counter += 1
                 if self.read_handle:
                     self.read_handle.close()
@@ -90,6 +95,7 @@ class IOInterface:
                 split = self.read_buffer[self.read_index-self.base_address-1].split()
                 return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
             else:
+                #print("Replacing older buffer")
                 self.access_counter += 1
                 if self.read_handle2:
                     self.read_handle2.close()
@@ -114,6 +120,7 @@ class IOInterface:
         for i in range(len(self.write_files)):
             with open(self.write_files[i], "a") as file:
                 file.write(format_float_pairs(self.write_buffers[i]))
+            #print(f"Printing cached records for {i}")
             self.access_counter += 1
             #print(f"wrote buffer{i} {self.write_buffers[i]}")
         self.clear_write_buffer()
@@ -133,6 +140,7 @@ class IOInterface:
                         file.write(format_float_pairs(self.write_buffers[i]))
                         self.write_buffers[i] = [record]
                         self.write_indexes[i] = 1
+                        #print("writing full page")
                         self.access_counter += 1
                         #print(f"writing {i}")
                 else:
