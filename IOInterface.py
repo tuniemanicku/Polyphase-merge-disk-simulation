@@ -12,11 +12,13 @@ class IOInterface:
         self.read_index = 0
         self.read_file = ""
         self.read_handle = None
+        self.file_index = 0
 
         self.read_buffer2 = []
         self.read_index2 = 0
         self.read_file2 = ""
         self.read_handle2 = None
+        self.file_index2 = 0
 
         self.write_buffers = []
         self.write_indexes = []
@@ -144,12 +146,14 @@ class IOInterface:
         self.read_file = ""
         if self.read_handle:
             self.read_handle.close()
+        self.file_index = 0
 
         self.read_buffer2 = []
         self.read_index2 = 0
         self.read_file2 = ""
         if self.read_handle2:
             self.read_handle2.close()
+        self.file_index2 = 0
 
     def clear_write_buffer(self):
         self.write_buffers = []

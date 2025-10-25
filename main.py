@@ -6,6 +6,10 @@ VOLTAGE_INDEX = 0
 ELECTRIC_CURRENT_INDEX = 1
 DATA_FILE = "data.txt"
 
+TAPE_1 = "tape1.txt"
+TAPE_2 = "tape2.txt"
+TAPE_3 = "tape3.txt"
+
 def show_file(filename=DATA_FILE):
     with open(filename, "r") as file:
         record = file.readline()
@@ -36,7 +40,8 @@ file_interface.clear_file("tape3.txt")
 
 #sorting
 #1.Initial distribution - Fibonacci
-
+larger_tape = None
+larger_no_of_runs = None
 n_tape1 = 1
 last_record_tape1 = None
 last_number_tape1 = None
@@ -66,6 +71,8 @@ while not all_runs_distributed:
         next_record = file_interface.read_page(index, DATA_FILE)
         index += 1
         if not next_record:
+            larger_tape = TAPE_1
+            larger_no_of_runs = n_tape1
             all_runs_distributed = True
             file_interface.write_page(last_record_tape1, "tape1.txt")
             break
@@ -92,6 +99,8 @@ while not all_runs_distributed:
         next_record = file_interface.read_page(index, DATA_FILE)
         index += 1
         if not next_record:
+            larger_tape = TAPE_2
+            larger_no_of_runs = n_tape2
             all_runs_distributed = True
             file_interface.write_page(last_record_tape1, "tape2.txt")
             break
@@ -106,13 +115,32 @@ while not all_runs_distributed:
             last_record_tape2 = next_record
     
 file_interface.write_all_cached_records()
+print("Larger tape after initial distribution:", larger_tape)
+shorter_tape = (TAPE_1 if larger_tape == TAPE_2 else TAPE_2)
+print("Shorter tape after initial distribution:", shorter_tape)
 
 #2.Merge loop TODO
-"""
-for i in range(4):
+file_sorted = False
+phase_counter = 1
+shorter_tape_empty = False
+while not file_sorted:
+    print(f"Start of phase {phase_counter}")
+    shorter_tape_index = 0
+    larger_tape_index = 0
+    while not shorter_tape_empty:
+        shorter_record = file_interface.read_page(shorter_tape_index, shorter_tape)
+        shorter_record_val = calculate_power(shorter_record)
+        shorter_tape_index += 1
+        larger_record = file_interface.read_page(larger_tape_index, larger_tape)
+        larger_record_val = calculate_power(larger_record)
+        larger_tape_index += 1
+
+
+    file_sorted = True
     show_file()
     os.system("pause")
-"""
+    phase_counter += 1
+
 #Final result
 print("disk accesses:",file_interface.access_counter)
 #show_file()
