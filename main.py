@@ -4,8 +4,9 @@ import os
 
 VOLTAGE_INDEX = 0
 ELECTRIC_CURRENT_INDEX = 1
+DATA_FILE = "data.txt"
 
-def show_file(filename="data.txt"):
+def show_file(filename=DATA_FILE):
     with open(filename, "r") as file:
         record = file.readline()
         while record:
@@ -27,14 +28,14 @@ while not input_valid:
 generate_data.generate_records(n_user=n_user, n_gen=n_gen)
 """
 #Starting state of the file
-show_file(filename="data.txt")
+#show_file(filename=DATA_FILE)
 file_interface = IOInterface()
 file_interface.clear_file("tape1.txt")
 file_interface.clear_file("tape2.txt")
 file_interface.clear_file("tape3.txt")
 
 #sorting
-#1.Initial distribution - Fibonacci TODO
+#1.Initial distribution - Fibonacci
 
 n_tape1 = 1
 last_record_tape1 = None
@@ -42,9 +43,8 @@ last_number_tape1 = None
 n_tape2 = 0
 last_record_tape2 = None
 last_number_tape2 = None
-next_record = file_interface.read_page(0, "data.txt")
+next_record = file_interface.read_page(0, DATA_FILE)
 next_record_val = calculate_power(next_record)
-#file_interface.write_page(next_record, "tape1.txt")
 
 finish1 = None
 finish2 = None
@@ -63,7 +63,7 @@ while not all_runs_distributed:
         if finish1 <= last_number_tape1:
             runs_read1 -= 1
     while runs_read1 < n_tape1:
-        next_record = file_interface.read_page(index, "data.txt")
+        next_record = file_interface.read_page(index, DATA_FILE)
         index += 1
         if not next_record:
             all_runs_distributed = True
@@ -89,7 +89,7 @@ while not all_runs_distributed:
         if finish2 <= last_number_tape2:
             runs_read2 -= 1
     while runs_read2 < n_tape2:
-        next_record = file_interface.read_page(index, "data.txt")
+        next_record = file_interface.read_page(index, DATA_FILE)
         index += 1
         if not next_record:
             all_runs_distributed = True
@@ -105,7 +105,7 @@ while not all_runs_distributed:
             last_number_tape2 = next_record_val
             last_record_tape2 = next_record
     
-file_interface.reset_write_buffer_end() #write rest of the records cached to page
+file_interface.write_all_cached_records()
 
 #2.Merge loop TODO
 """
