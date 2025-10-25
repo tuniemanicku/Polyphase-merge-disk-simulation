@@ -2,6 +2,9 @@ ID_VOLTAGE = 0
 ID_CURRENT = 1
 PAGE_SIZE = 10
 
+def format_float_pairs(pairs):
+    return "\n".join(f"{a} {b}" for a, b in pairs) + "\n"
+
 class IOInterface:
     def __init__(self):
         self.access_counter = 0
@@ -42,7 +45,8 @@ class IOInterface:
             if len(self.read_buffer) == 0:
                 return None
             self.read_index += 1
-            return self.read_buffer[self.read_index-self.base_address-1]
+            split = self.read_buffer[self.read_index-self.base_address-1].split()
+            return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
         elif filename == self.read_file2:
             if self.read_index2 - self.base_address2 == len(self.read_buffer) and self.read_index2%PAGE_SIZE != 0: #reached the end of file
                 return None
@@ -60,7 +64,8 @@ class IOInterface:
             if len(self.read_buffer2) == 0:
                 return None
             self.read_index2 += 1
-            return self.read_buffer2[self.read_index2-self.base_address2-1]
+            split = self.read_buffer2[self.read_index2-self.base_address2-1].split()
+            return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
         else:
             if self.recently_read == self.read_file2 or self.recently_read == "":
                 self.access_counter += 1
@@ -82,7 +87,8 @@ class IOInterface:
                 self.read_file = filename
                 self.recently_read = self.read_file
                 self.read_index = 1
-                return self.read_buffer[self.read_index-self.base_address-1]
+                split = self.read_buffer[self.read_index-self.base_address-1].split()
+                return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
             else:
                 self.access_counter += 1
                 if self.read_handle2:
@@ -101,12 +107,13 @@ class IOInterface:
                 self.read_file2 = filename
                 self.recently_read = self.read_file2
                 self.read_index2 = 1
-                return self.read_buffer2[self.read_index2-self.base_address2-1]
+                split = self.read_buffer2[self.read_index2-self.base_address2-1].split()
+                return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
             
     def write_all_cached_records(self):
         for i in range(len(self.write_files)):
             with open(self.write_files[i], "a") as file:
-                file.write(''.join(self.write_buffers[i]))
+                file.write(format_float_pairs(self.write_buffers[i]))
             self.access_counter += 1
             #print(f"wrote buffer{i} {self.write_buffers[i]}")
         self.clear_write_buffer()
@@ -123,7 +130,7 @@ class IOInterface:
             if self.write_files[i] == filename:
                 if self.write_indexes[i] == PAGE_SIZE:
                     with open(filename, "a") as file:
-                        file.write(''.join(self.write_buffers[i]))
+                        file.write(format_float_pairs(self.write_buffers[i]))
                         self.write_buffers[i] = [record]
                         self.write_indexes[i] = 1
                         self.access_counter += 1

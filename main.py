@@ -18,8 +18,7 @@ def show_file(filename=DATA_FILE):
             record = file.readline()
 
 def calculate_power(record):
-    arr = record.split()
-    return float(arr[VOLTAGE_INDEX]) * float(arr[ELECTRIC_CURRENT_INDEX])
+    return float(record[VOLTAGE_INDEX]) * float(record[ELECTRIC_CURRENT_INDEX])
 """
 input_valid = False
 while not input_valid:
