@@ -24,11 +24,11 @@ class IOInterface:
         self.write_indexes = []
         self.write_files = []
 
-    def read_page(self, index, filename):
+    def read_page(self, filename):
         if filename == self.read_file:
-            if index - self.base_address == len(self.read_buffer) and index%PAGE_SIZE != 0: #reached the end of file
+            if self.read_index - self.base_address == len(self.read_buffer) and self.read_index%PAGE_SIZE != 0: #reached the end of file
                 return None
-            if index - self.base_address == PAGE_SIZE:
+            if self.read_index - self.base_address == PAGE_SIZE:
                 self.access_counter += 1
                 self.base_address += PAGE_SIZE
                 self.read_buffer = []
@@ -41,11 +41,12 @@ class IOInterface:
             self.recently_read = self.read_file
             if len(self.read_buffer) == 0:
                 return None
-            return self.read_buffer[index-self.base_address]
+            self.read_index += 1
+            return self.read_buffer[self.read_index-self.base_address-1]
         elif filename == self.read_file2:
-            if index - self.base_address2 == len(self.read_buffer) and index%PAGE_SIZE != 0: #reached the end of file
+            if self.read_index2 - self.base_address2 == len(self.read_buffer) and self.read_index2%PAGE_SIZE != 0: #reached the end of file
                 return None
-            if index - self.base_address2 == PAGE_SIZE:
+            if self.read_index2 - self.base_address2 == PAGE_SIZE:
                 self.access_counter += 1
                 self.base_address2 += PAGE_SIZE
                 self.read_buffer2 = []
@@ -58,7 +59,8 @@ class IOInterface:
             self.recently_read = self.read_file2
             if len(self.read_buffer2) == 0:
                 return None
-            return self.read_buffer2[index-self.base_address2]
+            self.read_index2 += 1
+            return self.read_buffer2[self.read_index2-self.base_address2-1]
         else:
             if self.recently_read == self.read_file2 or self.recently_read == "":
                 self.access_counter += 1
@@ -67,11 +69,8 @@ class IOInterface:
                 self.read_handle = open(filename, "r")
                 i = 0
                 #print("index",index)
-                self.base_address = index-(index%PAGE_SIZE)
+                self.base_address = 0#index-(index%PAGE_SIZE)
                 #print(self.base_address)
-                while i < self.base_address:
-                    self.read_handle.readline()
-                    i += 1
                 self.read_buffer = []
 
                 for _ in range(PAGE_SIZE):
@@ -82,17 +81,15 @@ class IOInterface:
                         break
                 self.read_file = filename
                 self.recently_read = self.read_file
-                return self.read_buffer[index-self.base_address]
+                self.read_index = 1
+                return self.read_buffer[self.read_index-self.base_address-1]
             else:
                 self.access_counter += 1
                 if self.read_handle2:
                     self.read_handle2.close()
                 self.read_handle2 = open(filename, "r")
                 i = 0
-                self.base_address2 = index-(index%PAGE_SIZE)
-                while i < self.base_address2:
-                    self.read_handle2.readline()
-                    i += 1
+                self.base_address2 = 0#index-(index%PAGE_SIZE)
                 self.read_buffer2 = []
 
                 for _ in range(PAGE_SIZE):
@@ -103,7 +100,8 @@ class IOInterface:
                         break
                 self.read_file2 = filename
                 self.recently_read = self.read_file2
-                return self.read_buffer2[index-self.base_address2]
+                self.read_index2 = 1
+                return self.read_buffer2[self.read_index2-self.base_address2-1]
             
     def write_all_cached_records(self):
         for i in range(len(self.write_files)):
@@ -161,6 +159,9 @@ class IOInterface:
         self.write_files = []
     def clear_file(self, filename):
         with open(filename, "w") as file:
-            pass
+            if filename == self.read_file:
+                self.read_index = 0
+            elif filename == self.read_file2:
+                self.read_index2 = 0
     def __exit__(self):
         self.read_handle.close()
