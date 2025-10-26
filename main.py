@@ -4,7 +4,7 @@ import os
 import time
 VOLTAGE_INDEX = 0
 ELECTRIC_CURRENT_INDEX = 1
-DATA_FILE = "dist_test_data.txt"
+DATA_FILE = "data.txt"
 
 TAPE_1 = "tape1.txt"
 TAPE_2 = "tape2.txt"
@@ -121,9 +121,11 @@ shorter_tape_size = 0
 if longer_tape == TAPE_2:
     shorter_tape = TAPE_1
     shorter_tape_size = n_tape1
+    longer_tape_size = n_tape2
 else:
     shorter_tape = TAPE_2
     shorter_tape_size = n_tape2
+    longer_tape_size = n_tape1
 destination_tape = TAPE_3
 #print("Shorter tape after initial distribution:", shorter_tape)
 
@@ -151,6 +153,8 @@ while not file_sorted:
     run_counter_long = 0
     while not shorter_tape_empty:
         #time.sleep(0.5)
+        #if phase_counter > 1:
+        #        print(f"sh:{shorter_record_val}, l:{longer_record_val}")
         if run_counter_short == run_counter_long and longer_record and shorter_record:
             if shorter_record_val > longer_record_val:
                 file_interface.write_page(longer_record, destination_tape)
@@ -201,22 +205,32 @@ while not file_sorted:
             shorter_tape_empty = True
 
     file_interface.write_all_cached_records()
-    file_sorted = True
+    show_file(filename=destination_tape)
+    file_interface.reset_read_buffer(shorter_tape)
+    shorter_record = longer_record
+    longer_record = None
 
+    #switching tapes for the cycle
     temp = destination_tape
     destination_tape = shorter_tape
     shorter_tape = longer_tape
     longer_tape = temp
-    print(longer_tape)
-    print(shorter_tape)
-    print(destination_tape)
-    #show_file(filename=TAPE_1)
-    #show_file(filename=TAPE_2)
-    show_file(filename=TAPE_3)
-    os.system("pause")
-    phase_counter += 1
 
+    #print("longer",longer_tape)
+    #print("shorter",shorter_tape)
+    #print("dst",destination_tape)
+    file_interface.clear_file(destination_tape)
+    shorter_tape_empty = False
+    #set new short_tape_length and check whether file sorted
+    longer_tape_size -= shorter_tape_size
+    longer_tape_size, shorter_tape_size = shorter_tape_size, longer_tape_size
+    if shorter_tape_size == 0:
+        file_sorted = True
+        print("File sorted")
+    elif input("Press enter to continue: ") == "exit": #means to exit mid-simulation
+        file_sorted = True
+    #os.system("pause")
+    phase_counter += 1
 
 #Final result
 print("disk accesses:",file_interface.get_acces_counter())
-#show_file()

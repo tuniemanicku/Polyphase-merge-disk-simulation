@@ -151,22 +151,21 @@ class IOInterface:
     def get_acces_counter(self):
         return self.access_counter
 
-    def clear_read_buffer(self):
-        self.recently_read = ""
-
-        self.read_buffer = []
-        self.read_index = 0
-        self.read_file = ""
-        if self.read_handle:
-            self.read_handle.close()
-        self.file_index = 0
-
-        self.read_buffer2 = []
-        self.read_index2 = 0
-        self.read_file2 = ""
-        if self.read_handle2:
-            self.read_handle2.close()
-        self.file_index2 = 0
+    def reset_read_buffer(self, filename):
+        if filename == self.read_file:
+            self.read_buffer = []
+            self.read_index = 0
+            self.read_file = ""
+            if self.read_handle:
+                self.read_handle.close()
+            self.file_index = 0
+        elif filename == self.read_file2:
+            self.read_buffer2 = []
+            self.read_index2 = 0
+            self.read_file2 = ""
+            if self.read_handle2:
+                self.read_handle2.close()
+            self.file_index2 = 0
 
     def clear_write_buffer(self):
         self.write_buffers = []
