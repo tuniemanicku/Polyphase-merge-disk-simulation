@@ -4,24 +4,24 @@ import os
 import time
 VOLTAGE_INDEX = 0
 ELECTRIC_CURRENT_INDEX = 1
-DATA_FILE = "dist_test_data.txt"
+DATA_FILE = "data.bin"
 
-TAPE_1 = "tape1.txt"
-TAPE_2 = "tape2.txt"
-TAPE_3 = "tape3.txt"
+TAPE_1 = "tape1.bin"
+TAPE_2 = "tape2.bin"
+TAPE_3 = "tape3.bin"
 
 def show_file(filename=DATA_FILE):
-    with open(filename, "r") as file:
-        record = file.readline()
+    with open(filename, "rb") as file:
+        record = file.read(RECORD_SIZE)
         while record:
-            split = record.split()
+            split = struct.unpack("<dd", record)
             print(f"U: {split[ID_VOLTAGE]}, I: {split[ID_CURRENT]}, P: {float(split[ID_VOLTAGE])*float(split[ID_CURRENT])}")
-            record = file.readline()
+            record = file.read(RECORD_SIZE)
 
 def calculate_power(record):
     return float(record[VOLTAGE_INDEX]) * float(record[ELECTRIC_CURRENT_INDEX])
-"""
-input_valid = False
+
+"""input_valid = False
 while not input_valid:
     try:
         n_user = int(input("Number of records to type: "))
@@ -29,14 +29,15 @@ while not input_valid:
         input_valid = True
     except:
         input_valid = False
-generate_data.generate_records(n_user=n_user, n_gen=n_gen)
-"""
+generate_data.generate_records(n_user=n_user, n_gen=n_gen)"""
+
 #Starting state of the file
-#show_file(filename=DATA_FILE)
+print("starting stage of the file")
+show_file(filename=DATA_FILE)
 file_interface = IOInterface()
-file_interface.clear_file("tape1.txt")
-file_interface.clear_file("tape2.txt")
-file_interface.clear_file("tape3.txt")
+file_interface.clear_file(TAPE_1)
+file_interface.clear_file(TAPE_2)
+file_interface.clear_file(TAPE_3)
 
 #sorting
 #1.Initial distribution - Fibonacci
@@ -73,10 +74,10 @@ while not all_runs_distributed:
             longer_tape = TAPE_1
             longer_no_of_runs = n_tape1
             all_runs_distributed = True
-            file_interface.write_page(last_record_tape1, "tape1.txt")
+            file_interface.write_page(last_record_tape1, TAPE_1)
             break
         next_record_val = calculate_power(next_record)
-        file_interface.write_page(last_record_tape1, "tape1.txt")
+        file_interface.write_page(last_record_tape1, TAPE_1)
         if next_record_val < last_number_tape1:
             runs_read1 += 1
         if runs_read1 == n_tape1:
@@ -101,10 +102,10 @@ while not all_runs_distributed:
             longer_tape = TAPE_2
             longer_no_of_runs = n_tape2
             all_runs_distributed = True
-            file_interface.write_page(last_record_tape1, "tape2.txt")
+            file_interface.write_page(last_record_tape1, TAPE_2)
             break
         next_record_val = calculate_power(next_record)
-        file_interface.write_page(last_record_tape2, "tape2.txt")
+        file_interface.write_page(last_record_tape2, TAPE_2)
         if next_record_val < last_number_tape2:
             runs_read2 += 1
         if runs_read2 == n_tape2:
@@ -151,10 +152,8 @@ while not file_sorted:
         longer_record_val = calculate_power(longer_record)
     run_counter_short = 0
     run_counter_long = 0
+    # file_interface.print_read_index()
     while not shorter_tape_empty:
-        #time.sleep(0.5)
-        #if phase_counter > 1:
-        #        print(f"sh:{shorter_record_val}, l:{longer_record_val}")
         if run_counter_short == run_counter_long and longer_record and shorter_record:
             if shorter_record_val > longer_record_val:
                 file_interface.write_page(longer_record, destination_tape)
@@ -179,7 +178,7 @@ while not file_sorted:
                     shorter_record_val = next_record_val
                     shorter_record = next_record
         else:
-            if run_counter_short > run_counter_long:
+            if run_counter_short >= run_counter_long:
                 file_interface.write_page(longer_record, destination_tape)
                 next_record = file_interface.read_page(longer_tape)
                 if not next_record: #dummy
@@ -191,20 +190,23 @@ while not file_sorted:
                     longer_record_val = next_record_val
                     longer_record = next_record
             else:
-                file_interface.write_page(shorter_record, destination_tape)
+                if shorter_record:
+                    file_interface.write_page(shorter_record, destination_tape)
                 next_record = file_interface.read_page(shorter_tape)
                 if not next_record: #dummy
                     run_counter_short += 1
+                    shorter_record_val = None
                 else:
                     next_record_val = calculate_power(next_record)
                     if next_record_val < shorter_record_val:
                         run_counter_short += 1
                     shorter_record_val = next_record_val
-                    shorter_record = next_record
+                shorter_record = next_record
         if run_counter_short == shorter_tape_size and run_counter_long == shorter_tape_size:
             shorter_tape_empty = True
 
     file_interface.write_all_cached_records()
+    print("after merge")
     show_file(filename=destination_tape)
     file_interface.reset_read_buffer(shorter_tape)
     shorter_record = longer_record
@@ -216,10 +218,12 @@ while not file_sorted:
     shorter_tape = longer_tape
     longer_tape = temp
 
-    #print("longer",longer_tape)
-    #print("shorter",shorter_tape)
-    #print("dst",destination_tape)
+    # print("longer",longer_tape)
+    # print("shorter",shorter_tape)
+    # file_interface.get_read_index(shorter_tape)
+    # print("dst",destination_tape)
     file_interface.clear_file(destination_tape)
+    # file_interface.print_read_index()
     shorter_tape_empty = False
     #set new short_tape_length and check whether file sorted
     longer_tape_size -= shorter_tape_size

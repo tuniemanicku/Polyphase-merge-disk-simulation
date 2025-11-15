@@ -3,18 +3,21 @@ import struct
 # size of 2 doubles
 RECORD_SIZE = 16
 
-def show_file(filename="data.txt"):
-    with open(filename, "r") as file:
-        record = file.readline()
-        i = 0
-        while i<50 and record:
-            split = record.split()
+def show_file(filename="tape3.bin"):
+    with open(filename, "rb") as file:
+        record = file.read(RECORD_SIZE)
+        while record:
+            split = struct.unpack("<dd", record)
             print(f"U: {split[0]}, I: {split[1]}, P: {float(split[0])*float(split[1])}")
-            record = file.readline()
-            i+=1
-# show_file(filename="dist_test_data.txt")
-
-test_data = [
+            record = file.read(RECORD_SIZE)
+show_file(filename="data.bin")
+print("d-1")
+show_file(filename="tape1.bin")
+print("1-2")
+show_file(filename="tape2.bin")
+print("2-3")
+show_file(filename="tape3.bin")
+"""test_data = [
     (15.198071226668809, 0.4704053192398422),
     (4.091171605923423, 0.9967549438931322),
     (3.612326235964982, 0.97088785662258),
@@ -41,4 +44,4 @@ with open("dist_test_data.bin", "rb") as file:
     while value:
         record = struct.unpack("<dd", value)
         print(record)
-        value = file.read(RECORD_SIZE)
+        value = file.read(RECORD_SIZE)"""
