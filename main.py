@@ -4,7 +4,7 @@ import os
 import time
 VOLTAGE_INDEX = 0
 ELECTRIC_CURRENT_INDEX = 1
-DATA_FILE = "data.txt"
+DATA_FILE = "dist_test_data.txt"
 
 TAPE_1 = "tape1.txt"
 TAPE_2 = "tape2.txt"

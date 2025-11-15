@@ -7,4 +7,4 @@ def show_file(filename="data.txt"):
             print(f"U: {split[0]}, I: {split[1]}, P: {float(split[0])*float(split[1])}")
             record = file.readline()
             i+=1
-show_file(filename="tape3.txt")
+show_file(filename="dist_test_data.txt")
