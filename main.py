@@ -2,6 +2,7 @@ from IOInterface import *
 import generate_data
 import os
 import time
+import math
 VOLTAGE_INDEX = 0
 ELECTRIC_CURRENT_INDEX = 1
 DATA_FILE = "data.bin"
@@ -20,8 +21,8 @@ def show_file(filename=DATA_FILE):
 
 def calculate_power(record):
     return float(record[VOLTAGE_INDEX]) * float(record[ELECTRIC_CURRENT_INDEX])
-
-"""input_valid = False
+"""
+input_valid = False
 while not input_valid:
     try:
         n_user = int(input("Number of records to type: "))
@@ -29,20 +30,20 @@ while not input_valid:
         input_valid = True
     except:
         input_valid = False
-generate_data.generate_records(n_user=n_user, n_gen=n_gen)"""
-
+generate_data.generate_records(n_user=n_user, n_gen=n_gen)
+"""
 def single_sort(enable_print=False, prompt_for_records=False, n=30):
-    """
+    
     input_valid = False
     n_user = 0
     while not input_valid and prompt_for_records:
         try:
-            n_user = int(input("Number of records to type: "))
+            #n_user = int(input("Number of records to type: "))
             input_valid = True
         except:
             input_valid = False
     generate_data.generate_records(n_user=n_user, n_gen=n)
-    """
+    
     #Starting state of the file
     print("starting stage of the file")
     show_file(filename=DATA_FILE)
@@ -88,9 +89,11 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
             if not next_record:
                 longer_tape = TAPE_1
                 all_runs_distributed = True
+                #print("jeden")
                 file_interface.write_page(last_record_tape1, TAPE_1)
                 break
             next_record_val = calculate_power(next_record)
+            #print("dwa")
             file_interface.write_page(last_record_tape1, TAPE_1)
             if next_record_val < last_number_tape1:
                 runs_read1 += 1
@@ -117,9 +120,11 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
             if not next_record:
                 longer_tape = TAPE_2
                 all_runs_distributed = True
-                file_interface.write_page(last_record_tape1, TAPE_2)
+                #print("trzy")
+                file_interface.write_page(last_record_tape2, TAPE_2)
                 break
             next_record_val = calculate_power(next_record)
+            #print("cztery")
             file_interface.write_page(last_record_tape2, TAPE_2)
             if next_record_val < last_number_tape2:
                 runs_read2 += 1
@@ -133,7 +138,7 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
     file_interface.write_all_cached_records()
     #---------------------------------------------
     starting_run_count += 1 # break wychodzi z petli dystrybucji i juz nie inkrementuje ostatniego runa
-
+    #print("st:",starting_run_count)
     shorter_tape = None
     shorter_tape_size = 0
     if longer_tape == TAPE_2:
@@ -146,8 +151,9 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
         longer_tape_size = n_tape1
     destination_tape = TAPE_3
     #print("Shorter tape after initial distribution:", shorter_tape)
-
+    #print("sh",shorter_tape)
     #2.Merge loop TODO
+    file_interface.reset_access_counters()
     file_sorted = False
     phase_counter = 1
     shorter_tape_empty = False
@@ -171,35 +177,45 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
         run_counter_long = 0
         # file_interface.print_read_index()
         while not shorter_tape_empty:
+            #print(longer_record_val, shorter_record_val)
             if run_counter_short == run_counter_long and longer_record and shorter_record:
                 if shorter_record_val > longer_record_val:
                     file_interface.write_page(longer_record, destination_tape)
+                    #print("jeden")
                     next_record = file_interface.read_page(longer_tape)
                     if not next_record: #dummy
                         run_counter_long += 1
+                        next_record_val = None
                     else:
                         next_record_val = calculate_power(next_record)
                         if next_record_val < longer_record_val:
                             run_counter_long += 1
                         longer_record_val = next_record_val
-                        longer_record = next_record
+                    longer_record = next_record
                 else:
                     file_interface.write_page(shorter_record, destination_tape)
+                    #print("dwa")
                     next_record = file_interface.read_page(shorter_tape)
                     if not next_record: #dummy
                         run_counter_short += 1
+                        next_record_val = None
                     else:
                         next_record_val = calculate_power(next_record)
                         if next_record_val < shorter_record_val:
                             run_counter_short += 1
                         shorter_record_val = next_record_val
-                        shorter_record = next_record
+                    shorter_record = next_record
             else:
                 if run_counter_short >= run_counter_long:
-                    file_interface.write_page(longer_record, destination_tape)
+                    if longer_record:
+                        file_interface.write_page(longer_record, destination_tape)
+                        #print("trzy")
+                        #print(longer_tape)
                     next_record = file_interface.read_page(longer_tape)
+                    #print("test",next_record)
                     if not next_record: #dummy
                         run_counter_long += 1
+                        next_record_val = None
                     else:
                         next_record_val = calculate_power(next_record)
                         if next_record_val < longer_record_val:
@@ -209,6 +225,7 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
                 else:
                     if shorter_record:
                         file_interface.write_page(shorter_record, destination_tape)
+                        #print("cztery")
                     next_record = file_interface.read_page(shorter_tape)
                     if not next_record: #dummy
                         run_counter_short += 1
@@ -223,9 +240,11 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
                 shorter_tape_empty = True
 
         file_interface.write_all_cached_records()
-        print("after merge")
-        show_file(filename=destination_tape)
+        if enable_print:
+            print("after merge")
+            show_file(filename=destination_tape)
         file_interface.reset_read_buffer(shorter_tape)
+        #print(longer_record)
         shorter_record = longer_record
         longer_record = None
 
@@ -248,6 +267,8 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
         if shorter_tape_size == 0:
             file_sorted = True
             print("File sorted")
+        elif not enable_print:
+            pass
         elif input("Press enter to continue: ") == "exit": #means to exit mid-simulation
             file_sorted = True
         #os.system("pause")
@@ -255,13 +276,14 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
 
     #Final result
     all_accesses, read_accesses, write_accesses = file_interface.get_acces_counters()
+    print("initial run count:", starting_run_count)
     print(f"disk accesses: {all_accesses}, read accesses: {read_accesses}, write accesses: {write_accesses}")
-    print(f"N={n} calculated accesses from N: {n}")
+    print(f"N={n} calculated accesses from N: {2*n * (1.04 * math.log2(starting_run_count) + 1) / PAGE_SIZE}")
     print(f"phases needed: {phases_needed}")
     print("-----------------------")
 
 def main():
-    single_sort(enable_print=True, prompt_for_records=True)
+    single_sort(enable_print=False, prompt_for_records=True)
     # a for loop for different: N = Number of records
     """
     for n in range(100, 10_000, 500):

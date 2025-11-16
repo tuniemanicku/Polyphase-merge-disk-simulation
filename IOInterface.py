@@ -38,6 +38,8 @@ class IOInterface:
                                 self.read_buffers[i].append(struct.unpack("<dd", record))
                             else:
                                 break
+                        self.access_counter += 1
+                        self.read_counter += 1
                         return self.read_buffers[i][0]        
                     if self.read_indexes[i] - self.base_addresses[i] == len(self.read_buffers[i]) and self.read_indexes[i] % PAGE_SIZE != 0:
                         return None
@@ -56,6 +58,7 @@ class IOInterface:
                     if len(self.read_buffers[i]) == 0:
                         return None
                     self.read_indexes[i] += 1
+                    # print(self.read_buffers[i], self.read_indexes[i])
                     return self.read_buffers[i][self.read_indexes[i] - self.base_addresses[i] - 1]
         else:
             self.files_erased.append(False)
@@ -145,5 +148,9 @@ class IOInterface:
     def print_read_index(self):
         print(self.read_file)
         print(self.read_file2)
+    def reset_access_counters(self):
+        self.access_counter = 0
+        self.write_counter = 0
+        self.read_counter = 0
     def __exit__(self):
         self.read_handle.close()
