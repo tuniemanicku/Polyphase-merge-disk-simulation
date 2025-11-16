@@ -1,4 +1,5 @@
 import struct
+import os
 
 ID_VOLTAGE = 0
 ID_CURRENT = 1
@@ -152,5 +153,25 @@ class IOInterface:
         self.access_counter = 0
         self.write_counter = 0
         self.read_counter = 0
+    
+    def show_file(self, filename, short=None):
+        with open(filename, "rb") as file:
+            index = None
+            if short:
+                for i in range(len(self.read_files)):
+                    if self.read_files[i] == short:
+                        index = i
+                        break
+            if index:
+                counter = 1
+                while self.read_indexes[index] != counter:
+                    counter += 1
+                    file.read(RECORD_SIZE)
+            record = file.read(RECORD_SIZE)
+            while record:
+                split = struct.unpack("<dd", record)
+                print(f"U: {split[ID_VOLTAGE]}, I: {split[ID_CURRENT]}, P: {float(split[ID_VOLTAGE])*float(split[ID_CURRENT])}")
+                record = file.read(RECORD_SIZE)
+
     def __exit__(self):
         self.read_handle.close()

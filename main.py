@@ -11,14 +11,6 @@ TAPE_1 = "tape1.bin"
 TAPE_2 = "tape2.bin"
 TAPE_3 = "tape3.bin"
 
-def show_file(filename=DATA_FILE):
-    with open(filename, "rb") as file:
-        record = file.read(RECORD_SIZE)
-        while record:
-            split = struct.unpack("<dd", record)
-            print(f"U: {split[ID_VOLTAGE]}, I: {split[ID_CURRENT]}, P: {float(split[ID_VOLTAGE])*float(split[ID_CURRENT])}")
-            record = file.read(RECORD_SIZE)
-
 def calculate_power(record):
     return float(record[VOLTAGE_INDEX]) * float(record[ELECTRIC_CURRENT_INDEX])
 """
@@ -43,12 +35,12 @@ def single_sort(enable_print=False, prompt_for_records=False, test_file=None, n=
         except:
             input_valid = False
     generate_data.generate_records(n_user=n_user, n_gen=n)
+    file_interface = IOInterface()
     
     #Starting state of the file
     if enable_print:
         print("starting stage of the file")
-        show_file(filename=data_file)
-    file_interface = IOInterface()
+        file_interface.show_file(filename=data_file)
     file_interface.clear_file(TAPE_1)
     file_interface.clear_file(TAPE_2)
     file_interface.clear_file(TAPE_3)
@@ -153,7 +145,7 @@ def single_sort(enable_print=False, prompt_for_records=False, test_file=None, n=
     destination_tape = TAPE_3
     #print("Shorter tape after initial distribution:", shorter_tape)
     #print("sh",shorter_tape)
-    #2.Merge loop TODO
+    #2.Merge loop -----------------------------------------------------------------------------------
     file_interface.reset_access_counters()
     file_sorted = False
     phase_counter = 1
@@ -163,7 +155,11 @@ def single_sort(enable_print=False, prompt_for_records=False, test_file=None, n=
 
     while not file_sorted:
         if enable_print:
-            print(f"Start of phase {phase_counter}, n={shorter_tape_size}")
+            print(f"Start of phase {phase_counter}, n={shorter_tape_size} -------------------------------")
+            print("shorter tape")
+            file_interface.show_file(filename=shorter_tape, short=shorter_tape)
+            print("longer tape")
+            file_interface.show_file(filename=longer_tape)
         shorter_record = (file_interface.read_page(shorter_tape) if not shorter_record else shorter_record) #to wlozyc do ifa czy poprzedni rekord przeczytany czy None
         if shorter_record:
             shorter_record_val = calculate_power(shorter_record)
@@ -175,7 +171,7 @@ def single_sort(enable_print=False, prompt_for_records=False, test_file=None, n=
             longer_record_val = calculate_power(longer_record)
         run_counter_short = 0
         run_counter_long = 0
-        # file_interface.print_read_index()
+
         while not shorter_tape_empty:
             #print(longer_record_val, shorter_record_val)
             if run_counter_short == run_counter_long and longer_record and shorter_record:
@@ -242,7 +238,7 @@ def single_sort(enable_print=False, prompt_for_records=False, test_file=None, n=
         file_interface.write_all_cached_records()
         if enable_print:
             print("after merge")
-            show_file(filename=destination_tape)
+            file_interface.show_file(filename=destination_tape)
         file_interface.reset_read_buffer(shorter_tape)
         #print(longer_record)
         shorter_record = longer_record
@@ -289,11 +285,7 @@ def main():
     test_file_enabled = None
     if input("Load test file?: [y/n]") == "y":
         test_file_enabled = input("test file: ")
-    try:
-        single_sort(enable_print=True, prompt_for_records=True, test_file=test_file_enabled, n=30)
-    except:
-        print("wrong test file")
-        sys.exit(1)
+    single_sort(enable_print=True, prompt_for_records=True, test_file=test_file_enabled, n=30)
     
     # for loop for different: N = Number of records
     number_of_records = []
