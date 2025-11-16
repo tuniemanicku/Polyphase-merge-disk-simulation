@@ -31,7 +31,18 @@ while not input_valid:
         input_valid = False
 generate_data.generate_records(n_user=n_user, n_gen=n_gen)"""
 
-def single_sort(enable_print=False, n=30):
+def single_sort(enable_print=False, prompt_for_records=False, n=30):
+    """
+    input_valid = False
+    n_user = 0
+    while not input_valid and prompt_for_records:
+        try:
+            n_user = int(input("Number of records to type: "))
+            input_valid = True
+        except:
+            input_valid = False
+    generate_data.generate_records(n_user=n_user, n_gen=n)
+    """
     #Starting state of the file
     print("starting stage of the file")
     show_file(filename=DATA_FILE)
@@ -41,9 +52,12 @@ def single_sort(enable_print=False, n=30):
     file_interface.clear_file(TAPE_3)
 
     #sorting
+
+    # experiment variables
+    phases_needed = -1 # starts at -1 becuase first 2 distributions only need 1 merge as they are equal in size
+    starting_run_count = 0
     #1.Initial distribution - Fibonacci
     longer_tape = None
-    longer_no_of_runs = None
     n_tape1 = 1
     last_record_tape1 = None
     last_number_tape1 = None
@@ -57,13 +71,13 @@ def single_sort(enable_print=False, n=30):
     finish2 = None
 
     index = 1
-    first_run = True
     runs_read1 = 0
     runs_read2 = 0
 
     all_runs_distributed = False
     while not all_runs_distributed:
         n_tape1 += n_tape2
+        phases_needed += 1
         last_record_tape1 = next_record
         last_number_tape1 = next_record_val
         if finish1: #check for coalescing
@@ -73,7 +87,6 @@ def single_sort(enable_print=False, n=30):
             next_record = file_interface.read_page(DATA_FILE)
             if not next_record:
                 longer_tape = TAPE_1
-                longer_no_of_runs = n_tape1
                 all_runs_distributed = True
                 file_interface.write_page(last_record_tape1, TAPE_1)
                 break
@@ -81,6 +94,7 @@ def single_sort(enable_print=False, n=30):
             file_interface.write_page(last_record_tape1, TAPE_1)
             if next_record_val < last_number_tape1:
                 runs_read1 += 1
+                starting_run_count += 1
             if runs_read1 == n_tape1:
                 finish1 = last_number_tape1
             if runs_read1 < n_tape1:
@@ -91,6 +105,7 @@ def single_sort(enable_print=False, n=30):
             break
 
         n_tape2 += n_tape1
+        phases_needed += 1
         last_record_tape2 = next_record
         last_number_tape2 = next_record_val
         if finish2: #check for coalescing
@@ -101,7 +116,6 @@ def single_sort(enable_print=False, n=30):
             index += 1
             if not next_record:
                 longer_tape = TAPE_2
-                longer_no_of_runs = n_tape2
                 all_runs_distributed = True
                 file_interface.write_page(last_record_tape1, TAPE_2)
                 break
@@ -109,6 +123,7 @@ def single_sort(enable_print=False, n=30):
             file_interface.write_page(last_record_tape2, TAPE_2)
             if next_record_val < last_number_tape2:
                 runs_read2 += 1
+                starting_run_count += 1
             if runs_read2 == n_tape2:
                 finish2 = last_number_tape2
             if runs_read2 < n_tape2:
@@ -117,7 +132,8 @@ def single_sort(enable_print=False, n=30):
         
     file_interface.write_all_cached_records()
     #---------------------------------------------
-    #print("Longer tape after initial distribution:", longer_tape)
+    starting_run_count += 1 # break wychodzi z petli dystrybucji i juz nie inkrementuje ostatniego runa
+
     shorter_tape = None
     shorter_tape_size = 0
     if longer_tape == TAPE_2:
@@ -189,7 +205,7 @@ def single_sort(enable_print=False, n=30):
                         if next_record_val < longer_record_val:
                             run_counter_long += 1
                         longer_record_val = next_record_val
-                        longer_record = next_record
+                    longer_record = next_record
                 else:
                     if shorter_record:
                         file_interface.write_page(shorter_record, destination_tape)
@@ -238,10 +254,14 @@ def single_sort(enable_print=False, n=30):
         phase_counter += 1
 
     #Final result
-    print("disk accesses:",file_interface.get_acces_counter())
+    all_accesses, read_accesses, write_accesses = file_interface.get_acces_counters()
+    print(f"disk accesses: {all_accesses}, read accesses: {read_accesses}, write accesses: {write_accesses}")
+    print(f"N={n} calculated accesses from N: {n}")
+    print(f"phases needed: {phases_needed}")
+    print("-----------------------")
 
 def main():
-    single_sort(enable_print=True)
+    single_sort(enable_print=True, prompt_for_records=True)
     # a for loop for different: N = Number of records
     """
     for n in range(100, 10_000, 500):

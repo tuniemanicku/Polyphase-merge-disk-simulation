@@ -12,6 +12,8 @@ def format_float_pairs(pairs):
 class IOInterface:
     def __init__(self):
         self.access_counter = 0
+        self.write_counter = 0
+        self.read_counter = 0
 
         self.read_buffers = []
         self.read_files = []
@@ -50,6 +52,7 @@ class IOInterface:
                                 break
                         if len(self.read_buffers[i]) != 0:
                             self.access_counter += 1
+                            self.read_counter += 1
                     if len(self.read_buffers[i]) == 0:
                         return None
                     self.read_indexes[i] += 1
@@ -79,6 +82,7 @@ class IOInterface:
                     file.write(struct.pack("<dd", record[ID_VOLTAGE], record[ID_CURRENT]))
             #print(f"Printing cached records for {i}")
             self.access_counter += 1
+            self.write_counter += 1
             #print(f"wrote buffer{i} {self.write_buffers[i]}")
         self.clear_write_buffer()
 
@@ -100,14 +104,15 @@ class IOInterface:
                         self.write_indexes[i] = 1
                         #print("writing full page")
                         self.access_counter += 1
+                        self.write_counter += 1
                         #print(f"writing {i}")
                 else:
                     self.write_buffers[i].append(record)
                     self.write_indexes[i] += 1
                 break
     
-    def get_acces_counter(self):
-        return self.access_counter
+    def get_acces_counters(self):
+        return self.access_counter, self.read_counter, self.write_counter
 
     def reset_read_buffer(self, filename):
         for i in range(len(self.read_buffers)):
