@@ -2,7 +2,7 @@ import struct
 
 ID_VOLTAGE = 0
 ID_CURRENT = 1
-PAGE_SIZE = 10
+PAGE_SIZE = 10 # number of records per page which is our blocking factor (b)
 # record size is the size of 2 doubles
 RECORD_SIZE = 16
 
@@ -139,15 +139,11 @@ class IOInterface:
                         self.read_indexes[i] = 0
                         self.base_addresses[i] = 0
                         self.files_erased[i] = True
+                        self.access_counter += 1
+                        self.write_counter += 1
                         break
-    def get_read_index(self, filename):
-        if filename==self.read_file:
-            print(self.read_index)
-        if filename==self.read_file2:
-            print(self.read_index2)
-    def print_read_index(self):
-        print(self.read_file)
-        print(self.read_file2)
+
+
     def reset_access_counters(self):
         self.access_counter = 0
         self.write_counter = 0

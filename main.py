@@ -1,8 +1,8 @@
 from IOInterface import *
 import generate_data
-import os
-import time
 import math
+import matplotlib.pyplot as plt
+import sys
 VOLTAGE_INDEX = 0
 ELECTRIC_CURRENT_INDEX = 1
 DATA_FILE = "data.bin"
@@ -32,8 +32,8 @@ while not input_valid:
         input_valid = False
 generate_data.generate_records(n_user=n_user, n_gen=n_gen)
 """
-def single_sort(enable_print=False, prompt_for_records=False, n=30):
-    
+def single_sort(enable_print=False, prompt_for_records=False, test_file=None, n=30):
+    data_file = (test_file if test_file else DATA_FILE)
     input_valid = False
     n_user = 0
     while not input_valid and prompt_for_records:
@@ -45,8 +45,9 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
     generate_data.generate_records(n_user=n_user, n_gen=n)
     
     #Starting state of the file
-    print("starting stage of the file")
-    show_file(filename=DATA_FILE)
+    if enable_print:
+        print("starting stage of the file")
+        show_file(filename=data_file)
     file_interface = IOInterface()
     file_interface.clear_file(TAPE_1)
     file_interface.clear_file(TAPE_2)
@@ -65,7 +66,7 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
     n_tape2 = 0
     last_record_tape2 = None
     last_number_tape2 = None
-    next_record = file_interface.read_page(DATA_FILE)
+    next_record = file_interface.read_page(data_file)
     next_record_val = calculate_power(next_record)
 
     finish1 = None
@@ -85,7 +86,7 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
             if finish1 <= last_number_tape1:
                 runs_read1 -= 1
         while runs_read1 < n_tape1:
-            next_record = file_interface.read_page(DATA_FILE)
+            next_record = file_interface.read_page(data_file)
             if not next_record:
                 longer_tape = TAPE_1
                 all_runs_distributed = True
@@ -115,7 +116,7 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
             if finish2 <= last_number_tape2:
                 runs_read2 -= 1
         while runs_read2 < n_tape2:
-            next_record = file_interface.read_page(DATA_FILE)
+            next_record = file_interface.read_page(data_file)
             index += 1
             if not next_record:
                 longer_tape = TAPE_2
@@ -161,7 +162,8 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
     longer_record = None
 
     while not file_sorted:
-        print(f"Start of phase {phase_counter}, n={shorter_tape_size}")
+        if enable_print:
+            print(f"Start of phase {phase_counter}, n={shorter_tape_size}")
         shorter_record = (file_interface.read_page(shorter_tape) if not shorter_record else shorter_record) #to wlozyc do ifa czy poprzedni rekord przeczytany czy None
         if not shorter_record: #write rest of the longer to destination
             pass
@@ -278,17 +280,63 @@ def single_sort(enable_print=False, prompt_for_records=False, n=30):
     all_accesses, read_accesses, write_accesses = file_interface.get_acces_counters()
     print("initial run count:", starting_run_count)
     print(f"disk accesses: {all_accesses}, read accesses: {read_accesses}, write accesses: {write_accesses}")
-    print(f"N={n} calculated accesses from N: {2*n * (1.04 * math.log2(starting_run_count) + 1) / PAGE_SIZE}")
-    print(f"phases needed: {phases_needed}")
+    calculated_accesses = 2*n * (1.04 * math.log2(starting_run_count) + 1) / PAGE_SIZE
+    print(f"N={n} calculated accesses from N: {calculated_accesses}")
+    calculated_phases = 1.45 * math.log2(starting_run_count)
+    print(f"phases needed: {phases_needed} phases calculated: {calculated_phases}")
     print("-----------------------")
+    return calculated_accesses, all_accesses, calculated_phases, phases_needed
 
 def main():
-    single_sort(enable_print=False, prompt_for_records=True)
-    # a for loop for different: N = Number of records
-    """
-    for n in range(100, 10_000, 500):
-        single_sort(n=n)
-    """
+    test_file_enabled = None
+    if input("Load test file?: [y/n]") == "y":
+        test_file_enabled = input("test file: ")
+    try:
+        single_sort(enable_print=True, prompt_for_records=True, test_file=test_file_enabled, n=30)
+    except:
+        print("wrong test file")
+        sys.exit(1)
+    # for loop for different: N = Number of records
+    number_of_records = []
+    calculated_avg = []
+    count_avg = []
+    calculated_phases_avg = []
+    count_phases_avg = []
+    n=10
+    while n <= 100_000:
+        number_of_experiments = 5
+        calculated = []
+        count = []
+        calculated_phases = []
+        count_phases = []
+        for i in range(number_of_experiments):
+            calc, cnt, calc_ph, ph = single_sort(n=n)
+            calculated.append(calc)
+            count.append(cnt)
+            calculated_phases.append(calc_ph)
+            count_phases.append(ph)
+        number_of_records.append(n)
+        calculated_avg.append(sum(calculated)/number_of_experiments)
+        count_avg.append(sum(count)/number_of_experiments)
+        calculated_phases_avg.append(sum(calculated_phases)/number_of_experiments)
+        count_phases_avg.append(sum(count_phases)/number_of_experiments)
+        n *= 10
+    plt.title("Calculated vs counted access count for disk simulation using different record counts")
+    plt.loglog(number_of_records, calculated_avg, "--o")
+    plt.loglog(number_of_records, count_avg, "--o")
+    plt.legend(["Calculated accesses average", "Counted accesses average"])
+    plt.xlabel("Numer of records (n)")
+    plt.ylabel("Disk acceses")
+    plt.show()
+
+    plt.title("Calculated vs counted phases count for disk simulation using different record counts")
+    plt.loglog(number_of_records, calculated_phases_avg, "--o")
+    plt.loglog(number_of_records, count_phases_avg, "--o")
+    plt.legend(["Calculated phases average", "Counted phases average"])
+    plt.xlabel("Numer of records (n)")
+    plt.ylabel("Disk acceses")
+    plt.show()
+    
 
 if __name__ == "__main__":
     main()
