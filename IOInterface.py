@@ -1,8 +1,9 @@
 import struct
+import os
 
 ID_VOLTAGE = 0
 ID_CURRENT = 1
-PAGE_SIZE = 10
+PAGE_SIZE = 10 # number of records per page which is our blocking factor (b)
 # record size is the size of 2 doubles
 RECORD_SIZE = 16
 
@@ -12,6 +13,8 @@ def format_float_pairs(pairs):
 class IOInterface:
     def __init__(self):
         self.access_counter = 0
+        self.write_counter = 0
+        self.read_counter = 0
 
         self.read_buffers = []
         self.read_files = []
@@ -36,6 +39,8 @@ class IOInterface:
                                 self.read_buffers[i].append(struct.unpack("<dd", record))
                             else:
                                 break
+                        self.access_counter += 1
+                        self.read_counter += 1
                         return self.read_buffers[i][0]        
                     if self.read_indexes[i] - self.base_addresses[i] == len(self.read_buffers[i]) and self.read_indexes[i] % PAGE_SIZE != 0:
                         return None
@@ -50,9 +55,11 @@ class IOInterface:
                                 break
                         if len(self.read_buffers[i]) != 0:
                             self.access_counter += 1
+                            self.read_counter += 1
                     if len(self.read_buffers[i]) == 0:
                         return None
                     self.read_indexes[i] += 1
+                    # print(self.read_buffers[i], self.read_indexes[i])
                     return self.read_buffers[i][self.read_indexes[i] - self.base_addresses[i] - 1]
         else:
             self.files_erased.append(False)
@@ -69,6 +76,8 @@ class IOInterface:
                         self.read_buffers[-1].append(struct.unpack("<dd", record))
                     else:
                         break
+            self.access_counter += 1
+            self.read_counter += 1
             return self.read_buffers[-1][0]
             
     def write_all_cached_records(self):
@@ -79,6 +88,7 @@ class IOInterface:
                     file.write(struct.pack("<dd", record[ID_VOLTAGE], record[ID_CURRENT]))
             #print(f"Printing cached records for {i}")
             self.access_counter += 1
+            self.write_counter += 1
             #print(f"wrote buffer{i} {self.write_buffers[i]}")
         self.clear_write_buffer()
 
@@ -100,14 +110,15 @@ class IOInterface:
                         self.write_indexes[i] = 1
                         #print("writing full page")
                         self.access_counter += 1
+                        self.write_counter += 1
                         #print(f"writing {i}")
                 else:
                     self.write_buffers[i].append(record)
                     self.write_indexes[i] += 1
                 break
     
-    def get_acces_counter(self):
-        return self.access_counter
+    def get_acces_counters(self):
+        return self.access_counter, self.read_counter, self.write_counter
 
     def reset_read_buffer(self, filename):
         for i in range(len(self.read_buffers)):
@@ -118,6 +129,8 @@ class IOInterface:
                 self.read_indexes.pop(i)
                 self.read_handles.pop(i)
                 self.base_addresses.pop(i)
+                self.access_counter += 1
+                self.read_counter += 1
                 break
     def clear_write_buffer(self):
         self.write_buffers = []
@@ -131,14 +144,34 @@ class IOInterface:
                         self.read_indexes[i] = 0
                         self.base_addresses[i] = 0
                         self.files_erased[i] = True
+                        self.access_counter += 1
+                        self.write_counter += 1
                         break
-    def get_read_index(self, filename):
-        if filename==self.read_file:
-            print(self.read_index)
-        if filename==self.read_file2:
-            print(self.read_index2)
-    def print_read_index(self):
-        print(self.read_file)
-        print(self.read_file2)
+
+
+    def reset_access_counters(self):
+        self.access_counter = 0
+        self.write_counter = 0
+        self.read_counter = 0
+    
+    def show_file(self, filename, short=None):
+        with open(filename, "rb") as file:
+            index = None
+            if short:
+                for i in range(len(self.read_files)):
+                    if self.read_files[i] == short:
+                        index = i
+                        break
+            if index:
+                counter = 1
+                while self.read_indexes[index] != counter:
+                    counter += 1
+                    file.read(RECORD_SIZE)
+            record = file.read(RECORD_SIZE)
+            while record:
+                split = struct.unpack("<dd", record)
+                print(f"U: {split[ID_VOLTAGE]}, I: {split[ID_CURRENT]}, P: {float(split[ID_VOLTAGE])*float(split[ID_CURRENT])}")
+                record = file.read(RECORD_SIZE)
+
     def __exit__(self):
         self.read_handle.close()
