@@ -165,9 +165,7 @@ def single_sort(enable_print=False, prompt_for_records=False, test_file=None, n=
         if enable_print:
             print(f"Start of phase {phase_counter}, n={shorter_tape_size}")
         shorter_record = (file_interface.read_page(shorter_tape) if not shorter_record else shorter_record) #to wlozyc do ifa czy poprzedni rekord przeczytany czy None
-        if not shorter_record: #write rest of the longer to destination
-            pass
-        else:
+        if shorter_record:
             shorter_record_val = calculate_power(shorter_record)
         longer_record = (file_interface.read_page(longer_tape) if not longer_record else longer_record) #to wlozyc do ifa czy poprzedni rekord przeczytany czy None
         if not longer_record: #end algorithm
@@ -296,6 +294,7 @@ def main():
     except:
         print("wrong test file")
         sys.exit(1)
+    
     # for loop for different: N = Number of records
     number_of_records = []
     calculated_avg = []
@@ -303,7 +302,7 @@ def main():
     calculated_phases_avg = []
     count_phases_avg = []
     n=10
-    while n <= 100_000:
+    while n <= 10_000:
         number_of_experiments = 5
         calculated = []
         count = []
@@ -320,7 +319,7 @@ def main():
         count_avg.append(sum(count)/number_of_experiments)
         calculated_phases_avg.append(sum(calculated_phases)/number_of_experiments)
         count_phases_avg.append(sum(count_phases)/number_of_experiments)
-        n *= 10
+        n *= 5
     plt.title("Calculated vs counted access count for disk simulation using different record counts")
     plt.loglog(number_of_records, calculated_avg, "--o")
     plt.loglog(number_of_records, count_avg, "--o")

@@ -75,6 +75,8 @@ class IOInterface:
                         self.read_buffers[-1].append(struct.unpack("<dd", record))
                     else:
                         break
+            self.access_counter += 1
+            self.read_counter += 1
             return self.read_buffers[-1][0]
             
     def write_all_cached_records(self):
@@ -126,6 +128,8 @@ class IOInterface:
                 self.read_indexes.pop(i)
                 self.read_handles.pop(i)
                 self.base_addresses.pop(i)
+                self.access_counter += 1
+                self.read_counter += 1
                 break
     def clear_write_buffer(self):
         self.write_buffers = []
