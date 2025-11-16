@@ -13,184 +13,63 @@ class IOInterface:
     def __init__(self):
         self.access_counter = 0
 
-        self.recently_read = ""
-
-        self.read_buffer = []
-        self.read_index = 0
-        self.read_file = ""
-        self.read_handle = None
-        self.file_index = 0
-
-        self.read_buffer2 = []
-        self.read_index2 = 0
-        self.read_file2 = ""
-        self.read_handle2 = None
-        self.file_index2 = 0
-
-        self.read_buffer3 = []
-        self.read_index3 = 0
-        self.read_file3 = ""
-        self.read_handle3 = None
-        self.file_index3 = 0
+        self.read_buffers = []
+        self.read_files = []
+        self.read_indexes = []
+        self.read_handles = []
+        self.base_addresses = []
+        self.files_erased = []
 
         self.write_buffers = []
         self.write_indexes = []
         self.write_files = []
-
+    
     def read_page(self, filename):
-        if filename == self.read_file:
-            if self.read_index - self.base_address == len(self.read_buffer) and self.read_index%PAGE_SIZE != 0: #reached the end of file
-                return None
-            if self.read_index - self.base_address == PAGE_SIZE:
-                self.base_address += PAGE_SIZE
-                self.read_buffer = []
-                for _ in range(PAGE_SIZE):
-                    record = self.read_handle.read(RECORD_SIZE)
-                    if record:
-                        self.read_buffer.append(struct.unpack("<dd", record))
-                    else:
-                        break
-                if len(self.read_buffer) != 0:
-                    #print("End of buffer1 next access")
-                    self.access_counter += 1
-            self.recently_read = self.read_file
-            if len(self.read_buffer) == 0:
-                return None
-            self.read_index += 1
-            return self.read_buffer[self.read_index-self.base_address-1]
-            # return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
-        elif filename == self.read_file2:
-            if self.read_index2 - self.base_address2 == len(self.read_buffer2) and self.read_index2%PAGE_SIZE != 0: #reached the end of file
-                return None
-            if self.read_index2 - self.base_address2 == PAGE_SIZE:
-                self.base_address2 += PAGE_SIZE
-                self.read_buffer2 = []
-                for _ in range(PAGE_SIZE):
-                    record = self.read_handle2.read(RECORD_SIZE)
-                    if record:
-                        self.read_buffer2.append(struct.unpack("<dd", record))
-                    else:
-                        break
-                if len(self.read_buffer2) != 0:
-                    #print("End of buffer2 next access")
-                    self.access_counter += 1
-            self.recently_read = self.read_file2
-            if len(self.read_buffer2) == 0:
-                return None
-            self.read_index2 += 1
-            return self.read_buffer2[self.read_index2-self.base_address2-1]
-            # return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
-        elif filename == self.read_file3:
-            if self.read_index3 - self.base_address3 == len(self.read_buffer3) and self.read_index3%PAGE_SIZE != 0: #reached the end of file
-                return None
-            if self.read_index3 - self.base_address3 == PAGE_SIZE:
-                self.base_address3 += PAGE_SIZE
-                self.read_buffer3 = []
-                for _ in range(PAGE_SIZE):
-                    record = self.read_handle3.read(RECORD_SIZE)
-                    if record:
-                        self.read_buffer3.append(struct.unpack("<dd", record))
-                    else:
-                        break
-                if len(self.read_buffer3) != 0:
-                    #print("End of buffer3 next access")
-                    self.access_counter += 1
-            self.recently_read = self.read_file3
-            if len(self.read_buffer3) == 0:
-                return None
-            self.read_index3 += 1
-            return self.read_buffer3[self.read_index3-self.base_address3-1]
-            # return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
+        if filename in self.read_files:
+            for i in range(len(self.read_files)):
+                if filename == self.read_files[i]:
+                    if self.files_erased[i]:
+                        self.files_erased[i] = False
+                        for _ in range(PAGE_SIZE):
+                            record = self.read_handles[i].read(RECORD_SIZE)
+                            if record:
+                                self.read_buffers[i].append(struct.unpack("<dd", record))
+                            else:
+                                break
+                        return self.read_buffers[i][0]        
+                    if self.read_indexes[i] - self.base_addresses[i] == len(self.read_buffers[i]) and self.read_indexes[i] % PAGE_SIZE != 0:
+                        return None
+                    if self.read_indexes[i] - self.base_addresses[i] == PAGE_SIZE:
+                        self.base_addresses[i] += PAGE_SIZE
+                        self.read_buffers[i] = []
+                        for _ in range(PAGE_SIZE):
+                            record = self.read_handles[i].read(RECORD_SIZE)
+                            if record:
+                                self.read_buffers[i].append(struct.unpack("<dd", record))
+                            else:
+                                break
+                        if len(self.read_buffers[i]) != 0:
+                            self.access_counter += 1
+                    if len(self.read_buffers[i]) == 0:
+                        return None
+                    self.read_indexes[i] += 1
+                    return self.read_buffers[i][self.read_indexes[i] - self.base_addresses[i] - 1]
         else:
-            if self.recently_read == "":
-                #print("Replacing older buffer or placing first")
-                self.access_counter += 1
-                if self.read_handle:
-                    self.read_handle.close()
-                self.read_handle = open(filename, "rb")
-                i = 0
-                #print("index",index)
-                self.base_address = 0#index-(index%PAGE_SIZE)
-                #print(self.base_address)
-                self.read_buffer = []
+            self.files_erased.append(False)
+            self.read_files.append(filename)
+            self.read_buffers.append([])
+            self.read_indexes.append(1)
+            new_handle = open(filename, "rb")
+            self.read_handles.append(new_handle)
+            self.base_addresses.append(0)
 
-                for _ in range(PAGE_SIZE):
-                    record = self.read_handle.read(RECORD_SIZE)
+            for _ in range(PAGE_SIZE):
+                    record = new_handle.read(RECORD_SIZE)
                     if record:
-                        self.read_buffer.append(struct.unpack("<dd", record))
+                        self.read_buffers[-1].append(struct.unpack("<dd", record))
                     else:
                         break
-                self.read_file = filename
-                self.recently_read = self.read_file
-                self.read_index = 1
-                return self.read_buffer[self.read_index-self.base_address-1]
-                # return split[ID_VOLTAGE], split[ID_CURRENT]
-            elif self.read_file2 == "":
-                #print("Replacing older buffer")
-                self.access_counter += 1
-                if self.read_handle2:
-                    self.read_handle2.close()
-                self.read_handle2 = open(filename, "rb")
-                i = 0
-                self.base_address2 = 0#index-(index%PAGE_SIZE)
-                self.read_buffer2 = []
-
-                for _ in range(PAGE_SIZE):
-                    record = self.read_handle2.read(RECORD_SIZE)
-                    if record:
-                        self.read_buffer2.append(struct.unpack("<dd", record))
-                    else:
-                        break
-                self.read_file2 = filename
-                self.recently_read = self.read_file2
-                self.read_index2 = 1
-                return self.read_buffer2[self.read_index2-self.base_address2-1]
-                # return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
-            elif self.read_file3 == "":
-                #print("Replacing older buffer")
-                self.access_counter += 1
-                if self.read_handle3:
-                    self.read_handle3.close()
-                self.read_handle3 = open(filename, "rb")
-                i = 0
-                self.base_address3 = 0#index-(index%PAGE_SIZE)
-                self.read_buffer3 = []
-
-                for _ in range(PAGE_SIZE):
-                    record = self.read_handle3.read(RECORD_SIZE)
-                    if record:
-                        self.read_buffer3.append(struct.unpack("<dd", record))
-                    else:
-                        break
-                self.read_file3 = filename
-                self.recently_read = self.read_file3
-                self.read_index3 = 1
-                return self.read_buffer3[self.read_index3-self.base_address3-1]
-                # return float(split[ID_VOLTAGE]), float(split[ID_CURRENT])
-            else:
-                #print("Replacing older buffer or placing first")
-                self.access_counter += 1
-                if self.read_handle:
-                    self.read_handle.close()
-                self.read_handle = open(filename, "rb")
-                i = 0
-                #print("index",index)
-                self.base_address = 0#index-(index%PAGE_SIZE)
-                #print(self.base_address)
-                self.read_buffer = []
-
-                for _ in range(PAGE_SIZE):
-                    record = self.read_handle.read(RECORD_SIZE)
-                    if record:
-                        self.read_buffer.append(struct.unpack("<dd", record))
-                    else:
-                        break
-                self.read_file = filename
-                self.recently_read = self.read_file
-                self.read_index = 1
-                return self.read_buffer[self.read_index-self.base_address-1]
-                # return split[ID_VOLTAGE], split[ID_CURRENT]
-
+            return self.read_buffers[-1][0]
             
     def write_all_cached_records(self):
         for i in range(len(self.write_files)):
@@ -231,37 +110,28 @@ class IOInterface:
         return self.access_counter
 
     def reset_read_buffer(self, filename):
-        if filename == self.read_file:
-            self.read_buffer = []
-            self.read_index = 0
-            self.read_file = ""
-            if self.read_handle:
-                self.read_handle.close()
-            self.file_index = 0
-        elif filename == self.read_file2:
-            self.read_buffer2 = []
-            self.read_index2 = 0
-            self.read_file2 = ""
-            if self.read_handle2:
-                self.read_handle2.close()
-            self.file_index2 = 0
-        elif filename == self.read_file3:
-            self.read_buffer3 = []
-            self.read_index3 = 0
-            self.read_file3 = ""
-            if self.read_handle3:
-                self.read_handle3.close()
-            self.file_index3 = 0
+        for i in range(len(self.read_buffers)):
+            if filename == self.read_files[i]:
+                self.files_erased.pop(i)
+                self.read_files.pop(i)
+                self.read_buffers.pop(i)
+                self.read_indexes.pop(i)
+                self.read_handles.pop(i)
+                self.base_addresses.pop(i)
+                break
     def clear_write_buffer(self):
         self.write_buffers = []
         self.write_indexes = []
         self.write_files = []
     def clear_file(self, filename):
         with open(filename, "wb") as file:
-            if filename == self.read_file:
-                self.read_index = 0
-            elif filename == self.read_file2:
-                self.read_index2 = 0
+            if filename in self.read_files:
+                for i in range(len(self.read_files)):
+                    if filename == self.read_files[i]:
+                        self.read_indexes[i] = 0
+                        self.base_addresses[i] = 0
+                        self.files_erased[i] = True
+                        break
     def get_read_index(self, filename):
         if filename==self.read_file:
             print(self.read_index)
